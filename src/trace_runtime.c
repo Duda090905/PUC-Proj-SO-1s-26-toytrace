@@ -116,8 +116,7 @@ static int wait_for_syscall_stop(pid_t child, int *status)
     return 1;
                 }
 
-return 1;
-
+    return 2;  /*Quando a parada nao e de syscall, ignora*/
 }
 
 int trace_program(char *const argv[],
@@ -128,27 +127,27 @@ int trace_program(char *const argv[],
     int status = 0;
     int entering = 1;
 
-    if (argv == NULL || argv[0] == NULL) {
+    if (argv == NULL || argv[0] == NULL)    {
         fprintf(stderr, "erro: programa alvo ausente\n");
-        return -1;
-    }
+        return -1;  
+                                            }
 
     child = launch_tracee(argv);
-    if (child < 0) {
+    if (child < 0)  {
         return -1;
-    }
+                    }
 
-    if (wait_for_initial_stop(child) < 0) {
+    if (wait_for_initial_stop(child) < 0)   {
         return -1;
-    }
+                                            }
 
-    if (configure_trace_options(child) < 0) {
+    if (configure_trace_options(child) < 0)  {
         return -1;
-    }
+                                             }
 
-    if (resume_until_next_syscall(child, 0) < 0) {
+    if (resume_until_next_syscall(child, 0) < 0)    {
         return -1;
-    }
+                                                    }
 
     while (1) {
         struct user_regs_struct regs;
@@ -156,19 +155,23 @@ int trace_program(char *const argv[],
         int stop_kind;
 
         stop_kind = wait_for_syscall_stop(child, &status);
-        if (stop_kind < 0) {
+        if (stop_kind < 0)  {
             return -1;
-        }
-        if (stop_kind == 0) {
-            if (WIFEXITED(status)) {
+                            }
+if (stop_kind == 0) {
+            if (WIFEXITED(status))  {
                 return WEXITSTATUS(status);
-            }
-            if (WIFSIGNALED(status)) {
+                                    }
+            if (WIFSIGNALED(status))    {
                 return 128 + WTERMSIG(status);
-            }
+                                        }
             return 0;
         }
 
+        if (stop_kind == 2)     {
+            resume_until_next_syscall(child, 0);
+            continue;
+                                }
 
         if (ptrace(PTRACE_GETREGS, child, 0, &regs) < 0)
             {
@@ -183,8 +186,8 @@ int trace_program(char *const argv[],
 
         entering = !entering;
 
-        if (resume_until_next_syscall(child, 0) < 0) {
+        if (resume_until_next_syscall(child, 0) < 0)    {
             return -1;
-        }
-    }
+                                                        }
+                }
 }

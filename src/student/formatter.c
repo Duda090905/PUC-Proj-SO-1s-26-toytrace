@@ -1,61 +1,59 @@
 #include "student_api.h"
-
 #include "syscall_names.h"
-
 #include <stdio.h>
+#include "trace_helpers.h"
 
-void student_debug_raw_event(const struct syscall_event *ev,
-                             char *buf,
-                             size_t bufsz)
+void student_debug_raw_event(const struct syscall_event *ev,char *buf,size_t bufsz)
 {
-    /*
-     * Suporte de depuracao para a Semana 4:
-     *
-     * Esta funcao existe para inspecionar eventos crus depois que o runtime
-     * ja consegue parar em syscalls e preencher struct syscall_event.
-     * Ela nao e a formatacao final do projeto.
-     *
-     * Experimento sugerido:
-     * - imprima o nome da syscall;
-     * - imprima se o evento e entrada ou saida;
-     * - imprima o pid;
-     * - em eventos de entrada, observe os argumentos;
-     * - em eventos de saida, observe o valor de retorno.
-     *
-     * Depois compare a saida de:
-     *
-     *   ./toytrace trace --raw-events -- ./tests/targets/hello_write
-     *
-     * A pergunta importante da Semana 4 e:
-     * por que a mesma syscall aparece duas vezes?
-     */
+  
+
     snprintf(buf, bufsz, "pid=%d %s %s",
              ev->pid,
              syscall_name(ev->syscall_no),
              ev->entering ? "entrada" : "saida");
 }
 
-void student_format_event(const struct syscall_event *ev,
-                          char *buf,
-                          size_t bufsz)
+void student_format_event(const struct syscall_event *ev,char *buf,size_t bufsz)
 {
-    /*
-     * TODO Semana 5:
-     *
-     * Primeiro, formate uma syscall completa em uma linha simples.
-     *
-     * Depois, adicione casos especiais para:
-     *     read(fd, buf, count)
-     *     write(fd, buf, count)
-     *     openat(dirfd, "path", flags, mode)
-     *     execve("path", ...)
-     *     exit_group(status)
-     *
-     * Para caminhos do processo monitorado, use read_child_string().
-     * Se a leitura falhar, imprima "<ilegivel>".
-     */
+   
+
+if (ev->syscall_no == 1)    { 
+    snprintf(buf, bufsz, "write(%ld, %#lx, %ld) = %ld",
+             (long)ev->args[0],
+             ev->args[1],
+             (long)ev->args[2],
+             ev->ret);
+             return;
+                            }
+
+if (ev->syscall_no == 0)    {  
+    snprintf(buf, bufsz, "read(%ld, %#lx, %ld) = %ld",
+             (long)ev->args[0],
+             ev->args[1],
+             (long)ev->args[2],
+             ev->ret);
+             return;
+                            }
+if (ev->syscall_no == 59) {
+    char path[256];
+    if (read_child_string(ev->pid, ev->args[0], path, sizeof(path)) < 0)
+        snprintf(buf, bufsz, "execve(\"<ilegivel>\", ...) = %ld", ev->ret);
+    else
+        snprintf(buf, bufsz, "execve(\"%s\", ...) = %ld", path, ev->ret);
+    return;
+}
+if (ev->syscall_no == 257) {
+    char path[256];
+    if (read_child_string(ev->pid, ev->args[1], path, sizeof(path)) < 0)
+        snprintf(buf, bufsz, "openat(%ld, \"<ilegivel>\", %ld, %ld) = %ld",
+                 (long)ev->args[0], (long)ev->args[2], (long)ev->args[3], ev->ret);
+    else
+        snprintf(buf, bufsz, "openat(%ld, \"%s\", %ld, %ld) = %ld",
+                 (long)ev->args[0], path, (long)ev->args[2], (long)ev->args[3], ev->ret);
+    return;
+}
     snprintf(buf, bufsz, "%s(%#lx, %#lx, %#lx, %#lx, %#lx, %#lx) = %ld",
-             syscall_name(ev->syscall_no),
+        syscall_name(ev->syscall_no),
              ev->args[0],
              ev->args[1],
              ev->args[2],
