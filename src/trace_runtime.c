@@ -168,8 +168,10 @@ if (stop_kind == 0) {
             return 0;
         }
 
-        if (stop_kind == 2)     {
-            resume_until_next_syscall(child, 0);
+       if (stop_kind == 2)     {
+            int sig = WSTOPSIG(status);
+            if (sig == SIGTRAP) sig = 0;
+            resume_until_next_syscall(child, sig);
             continue;
                                 }
 
