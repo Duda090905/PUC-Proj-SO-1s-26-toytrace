@@ -52,6 +52,14 @@ if (ev->syscall_no == 257) {
                  (long)ev->args[0], path, (long)ev->args[2], (long)ev->args[3], ev->ret);
     return;
 }
+
+if (ev->syscall_no == 231)    {
+    snprintf(buf, bufsz, "exit_group(%ld) = %ld",
+             (long)ev->args[0], ev->ret);
+    return;
+                              }
+  
+  
     snprintf(buf, bufsz, "%s(%#lx, %#lx, %#lx, %#lx, %#lx, %#lx) = %ld",
         syscall_name(ev->syscall_no),
              ev->args[0],
